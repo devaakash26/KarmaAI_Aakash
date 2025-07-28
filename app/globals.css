@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --gray-850: #1e2030;
+  --hover-dark: rgba(55, 65, 81, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --gray-850: #1e2030;
+    --hover-dark: rgba(55, 65, 81, 0.5);
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom Tailwind Extensions */
+.bg-gray-850 {
+  background-color: var(--gray-850);
+}
+
+/* Improved dark mode hover states */
+.dark .dark\:hover\:bg-gray-750:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+
+.dark .dark\:hover\:bg-gray-700\/50:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+
+/* Force dark mode styles */
+.dark button:hover {
+  background-color: var(--hover-dark);
+}
+
+/* Override any white backgrounds in dark mode */
+@media (prefers-color-scheme: dark) {
+  .dark button:hover:not(.bg-indigo-600):not(.bg-red-600):not(.bg-green-600):not(.bg-white) {
+    background-color: var(--hover-dark) !important;
+  }
+}
