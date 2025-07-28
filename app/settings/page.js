@@ -225,8 +225,15 @@ export default function Settings() {
     <div className="min-h-screen bg-[#1a1f2e] text-white">
       <header className="bg-[#1e2434] shadow-sm border-b border-gray-800">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 w-8 h-8 rounded-lg"></div>
+          <Link href="/" className="flex items-center space-x-2 group">
+            <Image
+              src="/globe.svg"
+              alt="KarmaAI logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain saturate-150 group-hover:scale-105 transition-transform"
+              priority
+            />
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">KarmaAI</span>
           </Link>
           

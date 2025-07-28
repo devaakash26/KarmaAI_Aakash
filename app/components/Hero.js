@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
@@ -111,11 +112,18 @@ export default function Hero() {
       >
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3">
-            <motion.div 
-              className="w-10 h-10 bg-gradient-to-br from-purple-600 to-amber-500 rounded-lg flex items-center justify-center"
-              whileHover={{ rotate: 90, scale: 1.1 }}
+            <motion.div
+              whileHover={{ rotate: 360, transition: { duration: 0.6 } }}
+              className="w-10 h-10"
             >
-              <span className="text-2xl font-bold text-white">K</span>
+              <Image
+                src="/globe.svg"
+                alt="KarmaAI logo"
+                width={40}
+                height={40}
+                className="w-10 h-10 object-contain saturate-150"
+                priority
+              />
             </motion.div>
             <span className="text-2xl font-bold text-gray-200">KarmaAI</span>
           </Link>
@@ -136,7 +144,7 @@ export default function Hero() {
       </motion.nav>
 
       <main className="container mx-auto px-6 relative z-10 pt-24">
-        <div className="min-h-screen flex flex-col justify-center items-center text-center -mt-24">
+        <div className="min-h-screen flex flex-col justify-center items-center text-center -mt-8 sm:-mt-12 md:-mt-24">
           <motion.div 
             className="mb-8"
             initial={{ opacity: 0, y: 20 }}
@@ -184,6 +192,11 @@ export default function Hero() {
           </motion.div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="py-8 text-center text-gray-500 text-sm">
+        Made with <span className="text-red-500">❤</span> by Aakash
+      </footer>
     </div>
   );
 } 

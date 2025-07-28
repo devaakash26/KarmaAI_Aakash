@@ -30,6 +30,8 @@ import {
 } from '@heroicons/react/24/outline';
 // Additional minimal icon set from lucide-react for new navbar
 import { ChevronDown, ArrowRight, LayoutGrid, Settings as SettingsIcon, HelpCircle, LogOut } from 'lucide-react';
+import PropertyEditor from '../components/PropertyEditor';
+import JSZip from 'jszip';
 
 /* ------------------------------------------------------------------
    User dropdown menu – extracted from Hero section so it can be reused here
@@ -133,6 +135,15 @@ export default function Playground() {
   ]);
   const chatEndRef = useRef(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const historyRef = useRef(null); // ref for auto-scrolling
+  // New state for property editor
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [showPropertyEditor, setShowPropertyEditor] = useState(false);
+  const iframeRef = useRef(null);
+  // Add new state
+  const [downloadFormat, setDownloadFormat] = useState('jsx');
+  // add state showDownload near others
+  const [showDownload, setShowDownload] = useState(false);
 
   const DEFAULT_COMPONENT = `
 // A simple card component with Tailwind CSS
@@ -238,21 +249,32 @@ function Card() {
       ];
       setChatHistory(newChatHistory);
 
-      // Call to OpenRouter API
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          prompt,
-          chatHistory: newChatHistory.slice(-3), // Send only last 3 messages for context to save tokens
-          model: selectedModel // Pass the selected model
-        }),
-      });
+      let response;
 
+      // If element selected and we are in chat tab -> override mode
+      if (activeTab === 'chat' && selectedElement) {
+        response = await fetch('/api/override', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, code: generatedCode, selectedElement })
+        });
+      } else {
+        // Standard generate
+        response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            prompt,
+            chatHistory: newChatHistory.slice(-3),
+            model: selectedModel
+          }),
+        });
+      }
+ 
       const data = await response.json();
-
+ 
       if (!response.ok) {
         // Handle API error
         const errorMessage = data.message || 'Failed to generate code';
@@ -293,36 +315,45 @@ function Card() {
         throw new Error(errorMessage);
       }
 
-      setGeneratedCode(data.code);
-      setEditedCode(data.code);
-      
-      // Add AI response to chat history
-      setChatHistory([
-        ...newChatHistory,
-        { role: 'assistant', content: data.message || 'Here is the component you requested.', code: data.code }
-      ]);
-      
-      // Add to history
-      const newHistoryItem = {
-        prompt,
-        code: data.code,
-        timestamp: new Date().toISOString(),
-        model: selectedModel
-      };
-      
-      setHistory(prev => [
-        newHistoryItem,
-        ...prev.slice(0, 19) // Keep only the last 20 items
-      ]);
-      
-      // Save history to server
-      saveHistory(newHistoryItem);
-      
-      // Update preview
-      setPreviewKey(prevKey => prevKey + 1);
-      
-      // Switch to preview tab
-      setActiveTab('preview');
+      // On override update code but do not push to history
+      if (activeTab === 'chat' && selectedElement) {
+        setGeneratedCode(data.code);
+        setEditedCode(data.code);
+        setPreviewKey(k => k + 1);
+      } else {
+        setGeneratedCode(data.code);
+        setEditedCode(data.code);
+
+        // Add AI response to chat history
+        setChatHistory([
+          ...newChatHistory,
+          { role: 'assistant', content: data.message || 'Here is the component you requested.', code: data.code }
+        ]);
+
+        // Add to history
+        const newHistoryItem = {
+          id: Date.now(),
+          prompt,
+          code: data.code,
+          timestamp: new Date().toISOString(),
+          model: selectedModel
+        };
+        setHistory(prev => {
+          const updated = [newHistoryItem, ...prev.slice(0, 19)];
+          // smooth scroll to top so user sees the new entry
+          setTimeout(() => {
+            if (historyRef.current) {
+              historyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }, 100);
+          return updated;
+        });
+        saveHistory(newHistoryItem);
+      }
+      if (!(activeTab === 'chat' && selectedElement)) {
+        setPreviewKey(prevKey => prevKey + 1);
+        setActiveTab('preview');
+      }
     } catch (error) {
       console.error('Error generating code:', error);
       
@@ -363,22 +394,34 @@ function Card() {
     }
   };
 
-  const handleExport = () => {
-    // Create a Blob with the current code (edited or generated)
+  const handleExport = async () => {
     const codeToExport = isEditing ? editedCode : generatedCode;
-    const blob = new Blob([codeToExport], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create a temporary link and trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'component.jsx';
-    document.body.appendChild(a);
-    a.click();
-    
-    // Clean up
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+
+    if (downloadFormat === 'jsx') {
+      const blob = new Blob([codeToExport], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Component.jsx';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } else {
+      // zip format
+      const zip = new JSZip();
+      zip.file('Component.jsx', codeToExport);
+      // Optionally add README or CSS files here
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'component.zip';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
   };
 
   const copyToClipboard = () => {
@@ -524,7 +567,126 @@ function Card() {
             button {
               cursor: pointer;
             }
+
+            /* Interactive element styles */
+            .interactive-element {
+              cursor: pointer;
+              transition: outline 0.2s ease, transform 0.1s ease;
+            }
+            
+            .interactive-element:hover {
+              outline: 2px dashed rgba(99, 102, 241, 0.6);
+              outline-offset: 2px;
+              transform: scale(1.01);
+            }
+            
+            .selected-element {
+              outline: 2px solid rgb(99, 102, 241);
+              outline-offset: 2px;
+              box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            }
+            
+            /* Selection indicator animation */
+            @keyframes pulse {
+              0% { outline-color: rgba(99, 102, 241, 0.8); }
+              50% { outline-color: rgba(99, 102, 241, 0.4); }
+              100% { outline-color: rgba(99, 102, 241, 0.8); }
+            }
+            
+            .selected-element {
+              animation: pulse 2s infinite;
+            }
+            
+            /* Tooltip */
+            .element-tooltip {
+              position: absolute;
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              pointer-events: none;
+              z-index: 100;
+              transform: translateY(-100%);
+              top: -8px;
+              left: 50%;
+              transform: translateX(-50%) translateY(-100%);
+              white-space: nowrap;
+              opacity: 0;
+              transition: opacity 0.2s ease;
+            }
+            
+            .interactive-element:hover .element-tooltip {
+              opacity: 1;
+            }
           </style>
+          <script>
+            // Function to make elements interactive
+            function makeElementsInteractive() {
+              const interactiveElements = document.querySelectorAll('button, a, input, div.card, div.container, h1, h2, h3, h4, h5, h6, p, span, img');
+              
+              interactiveElements.forEach(el => {
+                el.classList.add('interactive-element');
+                
+                // Create tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'element-tooltip';
+                tooltip.textContent = el.tagName.toLowerCase();
+                el.style.position = 'relative';
+                el.appendChild(tooltip);
+                
+                el.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Remove selection from other elements
+                  document.querySelectorAll('.selected-element').forEach(selected => {
+                    selected.classList.remove('selected-element');
+                  });
+                  
+                  // Add selection to clicked element
+                  el.classList.add('selected-element');
+                  
+                  // Extract text content, handling nested elements
+                  let textContent = '';
+                  if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+                    // Simple text node
+                    textContent = el.textContent.trim();
+                  } else if (el.childNodes.length > 0) {
+                    // Get direct text nodes only
+                    for (const node of el.childNodes) {
+                      if (node.nodeType === 3) { // Text node
+                        const trimmed = node.textContent.trim();
+                        if (trimmed) textContent = trimmed;
+                      }
+                    }
+                  }
+                  
+                  // Send message to parent
+                  window.parent.postMessage({
+                    type: 'element-selected',
+                    element: {
+                      tagName: el.tagName,
+                      id: el.id,
+                      className: el.className,
+                      text: textContent || el.innerText || '',
+                      rect: el.getBoundingClientRect(),
+                      computedStyle: Object.fromEntries(
+                        Array.from(getComputedStyle(el))
+                          .filter(prop => !prop.startsWith('-'))
+                          .map(prop => [prop, getComputedStyle(el).getPropertyValue(prop)])
+                      )
+                    }
+                  }, '*');
+                });
+              });
+            }
+            
+            // Initialize when DOM is loaded
+            document.addEventListener('DOMContentLoaded', () => {
+              setTimeout(makeElementsInteractive, 100);
+            });
+          </script>
         </head>
         <body>
           <div class="preview-wrapper">
@@ -541,11 +703,25 @@ function Card() {
     return (
       <div className="relative h-[600px]">
         <iframe
+          ref={iframeRef}
           key={previewKey}
           srcDoc={sandboxHtml}
           className={`w-full border-0 rounded-lg ${isFullscreen ? 'fixed inset-0 z-50 h-screen' : 'h-full min-h-[500px]'}`}
           title="Component Preview"
           sandbox="allow-scripts"
+          onLoad={() => {
+            // Add a small delay to ensure the iframe content is fully loaded
+            setTimeout(() => {
+              if (iframeRef.current) {
+                try {
+                  // Reinitialize interactive elements
+                  iframeRef.current.contentWindow.postMessage({ type: 'reinitialize' }, '*');
+                } catch (error) {
+                  console.error('Error communicating with iframe:', error);
+                }
+              }
+            }, 200);
+          }}
         />
         
         {/* Refresh and fullscreen controls */}
@@ -582,6 +758,71 @@ function Card() {
     );
   };
 
+  // Listen for messages from the iframe
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'element-selected') {
+        const elementData = event.data.element;
+        
+        // Extract useful properties from computed style
+        const computedStyle = elementData.computedStyle || {};
+        
+        // Create a more structured element object with parsed properties
+        const element = {
+          tagName: elementData.tagName,
+          id: elementData.id,
+          className: elementData.className,
+          text: elementData.text || '',
+          padding: parseInt(computedStyle.padding) || 4,
+          fontSize: parseInt(computedStyle.fontSize) || 16,
+          backgroundColor: computedStyle.backgroundColor || '#3B82F6',
+          textColor: computedStyle.color || '#FFFFFF',
+          borderRadius: parseInt(computedStyle.borderRadius) || 4,
+          borderWidth: parseInt(computedStyle.borderWidth) || 0,
+          borderColor: computedStyle.borderColor || '#000000',
+          shadowSize: computedStyle.boxShadow && computedStyle.boxShadow !== 'none' ? 
+            (computedStyle.boxShadow.includes('10px') ? 4 : 
+             computedStyle.boxShadow.includes('4px') ? 2 : 1) : 0
+        };
+        
+        // Add a success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50 animate-fade-in-out';
+        notification.textContent = `Selected ${element.tagName.toLowerCase()} element`;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 2 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 2000);
+        
+        setSelectedElement(element);
+        setShowPropertyEditor(true);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  // Handle property editor updates
+  const handlePropertyUpdate = (updatedCode) => {
+    setEditedCode(updatedCode);
+    setGeneratedCode(updatedCode);
+    
+    // Delay the preview refresh to ensure the code is fully updated
+    setTimeout(() => {
+      setPreviewKey(prevKey => prevKey + 1);
+    }, 50);
+    
+    // Do NOT save property-editor-only changes to history
+  };
+
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -592,11 +833,42 @@ function Card() {
 
   // Update the main UI of the playground page
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Decorative background */}
-      {/* <Mandala className="absolute -top-1/4 -left-1/4 w-3/4 h-auto" />
-      <Mandala className="absolute -bottom-1/4 -right-1/4 w-3/4 h-auto" /> */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
+      {/* Inject global styles */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(20px); }
+          10% { opacity: 1; transform: translateY(0); }
+          90% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        .animate-fade-in-out {
+          animation: fadeInOut 2s forwards;
+        }
+      `}</style>
+      
+      {/* Property Editor */}
+      {showPropertyEditor && selectedElement && (
+        <PropertyEditor
+          selectedElement={selectedElement}
+          onClose={() => {
+            setShowPropertyEditor(false);
+            setSelectedElement(null);
+          }}
+          onUpdate={handlePropertyUpdate}
+          componentCode={isEditing ? editedCode : generatedCode}
+        />
+      )}
 
+    
       {/* Navbar */}
       <motion.nav
         className="fixed top-0 left-0 right-0 z-40 bg-gray-900 bg-opacity-60 backdrop-blur-md"
@@ -606,10 +878,17 @@ function Card() {
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3">
             <motion.div
-              className="w-9 h-9 bg-gradient-to-br from-purple-600 to-amber-500 rounded-lg flex items-center justify-center"
-              whileHover={{ rotate: 90, scale: 1.1 }}
+              whileHover={{ rotate: 360, transition: { duration: 0.6 } }}
+              className="w-9 h-9"
             >
-              <span className="text-xl font-bold text-white">K</span>
+              <Image
+                src="/globe.svg"
+                alt="KarmaAI logo"
+                width={36}
+                height={36}
+                className="w-9 h-9 object-contain"
+                priority
+              />
             </motion.div>
             <span className="text-xl font-bold text-gray-200">KarmaAI</span>
           </Link>
@@ -634,7 +913,7 @@ function Card() {
         <div className="mb-6 flex border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('preview')}
-            className={`px-6 py-3 text-sm font-medium flex items-center ${
+            className={`px-6 py-3 cursor-pointer text-sm font-medium flex items-center ${
               activeTab === 'preview'
                 ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -645,7 +924,7 @@ function Card() {
           </button>
           <button
             onClick={() => setActiveTab('code')}
-            className={`px-6 py-3 text-sm font-medium flex items-center ${
+            className={`px-6 py-3 cursor-pointer text-sm font-medium flex items-center ${
               activeTab === 'code'
                 ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -659,7 +938,7 @@ function Card() {
               setActiveTab('chat');
               setIsChatOpen(true);
             }}
-            className={`px-6 py-3 text-sm font-medium flex items-center ${
+            className={`px-6 py-3 cursor-pointer text-sm font-medium flex items-center ${
               activeTab === 'chat'
                 ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -673,30 +952,34 @@ function Card() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Sidebar - History */}
           <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-lg rounded-xl shadow-lg border border-gray-200/60 dark:border-gray-700/60 p-4">
               <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white flex items-center">
                 <ChatBubbleLeftRightIcon className="w-4 h-4 mr-2" />
                 Component History
               </h2>
               
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              <div ref={historyRef} className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
                 {history.length > 0 ? (
-                  history.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0, transition: { delay: index * 0.04 } }}
-                      whileHover={{ scale: 1.02 }}
-                      className="relative pl-5 py-3 bg-white/80 dark:bg-gray-800/60 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer hover:shadow-xl"
-                      onClick={() => selectHistoryItem(item)}
-                    >
-                      <span className="absolute left-2.5 top-5 w-2 h-2 bg-gradient-to-r from-fuchsia-500 to-amber-400 rounded-full"></span>
-                      <p className="font-semibold text-gray-800 dark:text-gray-200 truncate pr-6">{item.prompt}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </p>
-                    </motion.div>
-                  ))
+                  <AnimatePresence initial={false}>
+                    {history.map((item) => (
+                      <motion.div
+                        key={item.id || item.timestamp}
+                        layout
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } }}
+                        exit={{ opacity: 0, x: -30 }}
+                        whileHover={{ scale: 1.03 }}
+                        className="relative pl-5 py-3 bg-white/70 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200/60 dark:border-gray-700/60 rounded-lg cursor-pointer hover:shadow-lg"
+                        onClick={() => selectHistoryItem(item)}
+                      >
+                        <span className="absolute left-2 top-4 w-2 h-2 bg-gradient-to-r from-fuchsia-500 to-amber-400 rounded-full"></span>
+                        <p className="font-medium text-gray-800 dark:text-gray-200 truncate pr-6">{item.prompt}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 ) : (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <p>No components generated yet</p>
@@ -715,7 +998,7 @@ function Card() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0, transition: { duration: 0.5 } }}
             >
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6">
+              <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200/60 dark:border-gray-700/60 p-6">
                 <div className="flex items-center mb-6">
                   <svg className="h-8 w-8 text-amber-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
@@ -730,7 +1013,7 @@ function Card() {
                   <textarea
                     id="prompt"
                     rows="4"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/60 backdrop-blur focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 dark:text-white"
+                    className="w-full px-4 py-3 border border-gray-300/60 dark:border-gray-600/60 rounded-lg bg-white/60 dark:bg-gray-800/40 backdrop-blur-lg placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 dark:text-white"
                     placeholder="e.g., Make an amazing card with image component using Tailwind CSS"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -788,7 +1071,7 @@ function Card() {
             </motion.div>
 
             {/* Tab Content */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-lg rounded-xl shadow-lg border border-gray-200/60 dark:border-gray-700/60">
               {/* Preview Tab */}
               {activeTab === 'preview' && (
                 <div className="h-[600px]">
@@ -821,13 +1104,21 @@ function Card() {
                         <ClipboardDocumentIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                       )}
                     </button>
-                    <button
-                      onClick={handleExport}
-                      className="bg-white dark:bg-gray-700 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow-sm"
-                      title="Download as file"
-                    >
-                      <ArrowDownTrayIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowDownload(!showDownload)}
+                        className="bg-white dark:bg-gray-700 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow-sm"
+                        title="Download"
+                      >
+                        <ArrowDownTrayIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                      </button>
+                      {showDownload && (
+                        <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 w-32">
+                          <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => {setDownloadFormat('zip'); handleExport(); setShowDownload(false);}}>.zip</button>
+                          <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => {setDownloadFormat('jsx'); handleExport(); setShowDownload(false);}}>.jsx</button>
+                        </div>
+                      )}
+                    </div>
                     {!isEditing ? (
                       <button
                         onClick={() => setIsEditing(true)}
@@ -926,7 +1217,7 @@ function Card() {
                           }
                         }}
                         placeholder="Ask about the component or request changes..."
-                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                        className="flex-1 px-4 py-2 border border-gray-300/60 dark:border-gray-600/60 rounded-l-lg bg-white/60 dark:bg-gray-800/40 backdrop-blur-lg placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
                         rows="2"
                       />
                       <button

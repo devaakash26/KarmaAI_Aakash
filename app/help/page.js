@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import { ArrowLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { ChevronDown, LayoutGrid, Settings, HelpCircle, LogOut } from 'lucide-react';
@@ -103,12 +104,19 @@ export default function Help() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-3">
-            <motion.div 
-              className="w-8 h-8 bg-gradient-to-br from-purple-600 to-amber-500 rounded-lg flex items-center justify-center"
-              whileHover={{ rotate: 90, scale: 1.1 }}
+          <Link href="/" className="flex items-center space-x-3 group">
+            <motion.div
+              whileHover={{ rotate: 360, transition: { duration: 0.6 } }}
+              className="w-8 h-8"
             >
-              <span className="text-lg font-bold text-white">K</span>
+              <Image
+                src="/globe.svg"
+                alt="KarmaAI logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 object-contain saturate-150 group-hover:scale-105 transition-transform"
+                priority
+              />
             </motion.div>
             <span className="text-xl font-bold text-gray-200">KarmaAI</span>
           </Link>
