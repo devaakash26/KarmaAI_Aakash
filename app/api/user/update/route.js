@@ -15,6 +15,8 @@ try {
     email: { type: String, unique: true },
     image: String,
     emailVerified: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   });
   User = mongoose.model('User', UserSchema);
 }

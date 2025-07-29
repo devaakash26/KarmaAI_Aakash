@@ -26,6 +26,8 @@ try {
     image: String,
     emailVerified: Date,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   });
   
   User = mongoose.model('User', UserSchema);

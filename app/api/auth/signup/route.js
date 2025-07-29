@@ -21,6 +21,8 @@ try {
     },
     image: String,
     emailVerified: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
   });
   
