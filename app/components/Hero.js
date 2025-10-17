@@ -195,7 +195,7 @@ export default function Hero() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-gray-500 text-sm">
-        Made with <span className="text-red-500">❤</span> by Aakash
+        Made with <span className="text-red-500">❤</span> by Indian Developer
       </footer>
     </div>
   );
