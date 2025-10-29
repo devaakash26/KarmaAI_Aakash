@@ -1245,7 +1245,7 @@ function Card() {
 
       {/* Footer */}
       <footer className="mt-16 py-6 text-center text-gray-400 bg-transparent">
-        Made with <span className="text-red-500">❤️</span> by Aakash
+        Made with <span className="text-red-500">❤️</span> by Indian Developer
       </footer>
     </div>
   );
