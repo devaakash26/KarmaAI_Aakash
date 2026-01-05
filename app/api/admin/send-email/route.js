@@ -48,11 +48,11 @@ export async function POST(request) {
     }
 
     // Check if email credentials are configured
-    if (!process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
+    if (!process.env.EMAIL_SERVER_ADMIN || !process.env.EMAIL_SERVER_ADMIN_PASSWORD) {
       return NextResponse.json(
         {
           error:
-            "Email service not configured. Please add EMAIL_SERVER_USER and EMAIL_SERVER_PASSWORD to your .env file.",
+            "Admin email service not configured. Please add EMAIL_SERVER_ADMIN and EMAIL_SERVER_ADMIN_PASSWORD to your .env file.",
         },
         { status: 503 }
       );
@@ -75,8 +75,8 @@ export async function POST(request) {
       port: parseInt(process.env.EMAIL_SERVER_PORT),
       secure: process.env.EMAIL_SERVER_SECURE === "true",
       auth: {
-        user: process.env.EMAIL_SERVER_USER,
-        pass: process.env.EMAIL_SERVER_PASSWORD.replace(/['"]/g, ""), // Remove quotes if present
+        user: process.env.EMAIL_SERVER_ADMIN,
+        pass: process.env.EMAIL_SERVER_ADMIN_PASSWORD.replace(/['"]/g, ""), // Remove quotes if present
       },
     });
 
@@ -84,8 +84,8 @@ export async function POST(request) {
     const emailPromises = users.map((user) => {
       const mailOptions = {
         from:
-          process.env.EMAIL_FROM ||
-          `"KarmaAI Admin" <${process.env.EMAIL_SERVER_USER}>`,
+          process.env.EMAIL_ADMIN_FROM ||
+          `"KarmaAI Admin" <${process.env.EMAIL_SERVER_ADMIN}>`,
         to: user.email,
         subject: subject,
         html: `
