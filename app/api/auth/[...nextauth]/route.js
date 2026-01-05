@@ -26,8 +26,10 @@ try {
     image: String,
     emailVerified: Date,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    blocked: { type: Boolean, default: false },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+    createdAt: { type: Date, default: Date.now },
   });
   
   User = mongoose.model('User', UserSchema);
@@ -62,6 +64,11 @@ export const authOptions = {
         if (!user || !user.password) {
           throw new Error('No user found with this email');
         }
+
+        // Check if user is blocked
+        if (user.blocked) {
+          throw new Error('Your account has been blocked. Please contact support.');
+        }
         
         const isPasswordMatch = await compare(credentials.password, user.password);
         
@@ -75,6 +82,7 @@ export const authOptions = {
           name: user.name,
           email: user.email,
           image: user.image,
+          role: user.role,
         };
       }
     })
@@ -95,8 +103,21 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
+      // Always fetch the latest user data from database to get updated role and blocked status
+      await dbConnect();
+      const dbUser = await User.findOne({ email: session.user.email }).select('role blocked');
+      
+      if (dbUser) {
+        session.user.role = dbUser.role;
+        session.user.blocked = dbUser.blocked;
+        
+        // If user is blocked, return null to end the session
+        if (dbUser.blocked) {
+          return null;
+        }
+      }
+      
       session.user.id = token.id;
-      session.user.role = token.role;
       return session;
     },
   },

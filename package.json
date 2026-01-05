@@ -17,6 +17,7 @@
     "framer-motion": "^12.23.9",
     "jszip": "^3.10.1",
     "lucide-react": "^0.532.0",
+    "mongodb": "^6.21.0",
     "mongoose": "^8.16.5",
     "multer": "^2.0.2",
     "next": "15.4.4",
