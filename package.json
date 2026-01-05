@@ -20,7 +20,7 @@
     "mongodb": "^6.21.0",
     "mongoose": "^8.16.5",
     "multer": "^2.0.2",
-    "next": "15.4.4",
+    "next": "15.4.10",
     "next-auth": "^4.24.11",
     "next-cloudinary": "^6.16.0",
     "next-connect": "^1.0.0",
