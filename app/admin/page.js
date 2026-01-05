@@ -71,7 +71,9 @@ export default function AdminPortal() {
 
       if (response.ok) {
         fetchUsers();
-        showSuccessAlert(`User ${!currentStatus ? 'blocked' : 'unblocked'} successfully!`);
+        showSuccessAlert(
+          `User ${!currentStatus ? "blocked" : "unblocked"} successfully!`
+        );
       }
     } catch (error) {
       console.error("Error blocking user:", error);
@@ -218,12 +220,20 @@ export default function AdminPortal() {
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
                 animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
               <div className="relative flex items-center space-x-3">
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: Infinity,
+                    repeatDelay: 2,
+                  }}
                 >
                   <CheckCircleIcon className="w-6 h-6 text-white" />
                 </motion.div>
@@ -442,7 +452,10 @@ export default function AdminPortal() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                  whileFocus={{ scale: 1.01, boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)" }}
+                  whileFocus={{
+                    scale: 1.01,
+                    boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)",
+                  }}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
@@ -466,7 +479,9 @@ export default function AdminPortal() {
             {/* Users Table */}
             <motion.div
               className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden"
-              whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
+              whileHover={{
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              }}
               transition={{ duration: 0.3 }}
             >
               <div className="overflow-x-auto">
@@ -560,7 +575,10 @@ export default function AdminPortal() {
                             animate={{
                               scale: user.blocked ? [1, 1.05, 1] : 1,
                             }}
-                            transition={{ duration: 2, repeat: user.blocked ? Infinity : 0 }}
+                            transition={{
+                              duration: 2,
+                              repeat: user.blocked ? Infinity : 0,
+                            }}
                           >
                             {user.blocked ? "Blocked" : "Active"}
                           </motion.span>
@@ -732,7 +750,9 @@ export default function AdminPortal() {
               >
                 <motion.h2
                   className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent mb-2"
-                  animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+                  animate={{
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                  }}
                   transition={{ duration: 5, repeat: Infinity }}
                 >
                   Send Email to Users
@@ -743,7 +763,8 @@ export default function AdminPortal() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  Selected {selectedUsers.length} user(s). Go to Users tab to select recipients.
+                  Selected {selectedUsers.length} user(s). Go to Users tab to
+                  select recipients.
                 </motion.p>
               </motion.div>
 
@@ -767,7 +788,10 @@ export default function AdminPortal() {
                     onChange={(e) => setEmailSubject(e.target.value)}
                     placeholder="Enter email subject..."
                     className="w-full px-4 py-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-300 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    whileFocus={{ scale: 1.01, boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)" }}
+                    whileFocus={{
+                      scale: 1.01,
+                      boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)",
+                    }}
                   />
                 </motion.div>
 
@@ -785,7 +809,10 @@ export default function AdminPortal() {
                     placeholder="Enter your message..."
                     rows={8}
                     className="w-full px-4 py-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-300 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all duration-200"
-                    whileFocus={{ scale: 1.01, boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)" }}
+                    whileFocus={{
+                      scale: 1.01,
+                      boxShadow: "0 0 0 3px rgba(168, 85, 247, 0.1)",
+                    }}
                   />
                 </motion.div>
 

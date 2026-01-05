@@ -99,7 +99,7 @@ const UserMenu = ({ user }) => {
             >
               <LayoutGrid className="w-4 h-4 mr-3" /> Playground
             </Link>
-            {user.role === 'admin' && (
+            {user.role === "admin" && (
               <Link
                 href="/admin"
                 className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-700 rounded-md"
@@ -1407,7 +1407,11 @@ function Card() {
                         </p>
                         <div className="flex items-center justify-between mt-3">
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(item.timestamp).toLocaleDateString()} • {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(item.timestamp).toLocaleDateString()} •{" "}
+                            {new Date(item.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </p>
                           <div className="flex items-center space-x-1">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
