@@ -47,12 +47,25 @@ export async function POST(request) {
       );
     }
 
-    // Check if email credentials are configured
-    if (!process.env.EMAIL_SERVER_ADMIN || !process.env.EMAIL_SERVER_ADMIN_PASSWORD) {
+    // Check if email credentials are configured based on admin email
+    const isAdminEmail = session.user.email === "choudharykiran1750@gmail.com";
+
+    const emailUser = isAdminEmail
+      ? process.env.EMAIL_SERVER_ADMIN
+      : process.env.EMAIL_SERVER_USER;
+    const emailPassword = isAdminEmail
+      ? process.env.EMAIL_SERVER_ADMIN_PASSWORD
+      : process.env.EMAIL_SERVER_PASSWORD;
+    const emailFrom = isAdminEmail
+      ? process.env.EMAIL_ADMIN_FROM
+      : process.env.EMAIL_FROM;
+
+    if (!emailUser || !emailPassword) {
       return NextResponse.json(
         {
-          error:
-            "Admin email service not configured. Please add EMAIL_SERVER_ADMIN and EMAIL_SERVER_ADMIN_PASSWORD to your .env file.",
+          error: `Email service not configured for ${
+            isAdminEmail ? "admin" : "regular"
+          } email. Please check your .env file.`,
         },
         { status: 503 }
       );
@@ -75,17 +88,15 @@ export async function POST(request) {
       port: parseInt(process.env.EMAIL_SERVER_PORT),
       secure: process.env.EMAIL_SERVER_SECURE === "true",
       auth: {
-        user: process.env.EMAIL_SERVER_ADMIN,
-        pass: process.env.EMAIL_SERVER_ADMIN_PASSWORD.replace(/['"]/g, ""), // Remove quotes if present
+        user: emailUser,
+        pass: emailPassword.replace(/['"]/g, ""), // Remove quotes if present
       },
     });
 
     // Send emails
     const emailPromises = users.map((user) => {
       const mailOptions = {
-        from:
-          process.env.EMAIL_ADMIN_FROM ||
-          `"KarmaAI Admin" <${process.env.EMAIL_SERVER_ADMIN}>`,
+        from: emailFrom || `"KarmaAI Admin" <${emailUser}>`,
         to: user.email,
         subject: subject,
         html: `
@@ -97,7 +108,9 @@ export async function POST(request) {
               <div style="color: #333; line-height: 1.6; white-space: pre-wrap;">${message}</div>
               <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
               <p style="color: #666; font-size: 12px; margin: 0;">
-                This email was sent from KarmaAI Admin Portal.<br>
+                This email was sent from KarmaAI Admin Portal by ${
+                  session.user.name || session.user.email
+                }.<br>
                 © 2026 KarmaAI. All rights reserved.
               </p>
             </div>
